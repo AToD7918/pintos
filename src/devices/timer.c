@@ -92,8 +92,17 @@ timer_sleep (int64_t ticks)
   int64_t start = timer_ticks ();
 
   ASSERT (intr_get_level () == INTR_ON);
-  while (timer_elapsed (start) < ticks) 
-    thread_yield ();
+      // while (timer_elapsed (start) < ticks) 
+      //   thread_yield ();
+    /*
+    ###############################################################################
+    HERE HERE HERE (8:11)
+    = check the tick, if there is time left to wake up, remove the caller thread from 'ready_list' and insert to sleep queue and change it to 'blocked' (8:11)
+    = Call the function that insert thread to the sleep queue
+    ###############################################################################
+    */
+  if (timer_elapsed(start) < ticks)
+      thread_sleep(start + ticks);    //implement by yourself
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -172,6 +181,27 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
+  // New code
+  thread_wake_up (ticks);    // functionize it
+  /*
+  ###############################################################################
+  HERE HERE HERE
+  = remove from the sleep queue and insert it to 'ready_list' and change state 
+  = At every tick, check whether some thread must wake up from sleep queue and call wake up function (12:28)
+
+  check sleep list and the global tick      (check / in thread_wake_up())
+  find any threads to wake up,              (check / in thread_wake_up())
+  move them to the ready list if necessary  (check / in thread_wake_up())
+  update the global tick.                   (check)
+
+
+  // 1st part
+  func 1 : set it to 'blocked' & insert it to sleep queue       (thread_sleep())
+  func 2 : find the thread to wake up from sleep and wake it up (thread_wake_up())
+  func 3 : save the min value of tick that threads have         (by tick_till_wake_up)    
+  func 4 : return the min value of tick                         (by update it)
+  ###############################################################################
+  */
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer

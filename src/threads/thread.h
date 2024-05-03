@@ -92,6 +92,16 @@ struct thread
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
+   // donno what is this for rn 
+   
+    /*
+    tick till wake up (8:00) (use 'int64' type)
+    thread_tick (thread.c -> line 123)
+    */
+   struct list_elem sleep_elem;              /* Sleep_List element. */ // no need to init_thread
+
+   int64_t tick_till_wake_up; // end_ticks // need to init_thread
+
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -108,9 +118,21 @@ struct thread
 extern bool thread_mlfqs;
 
 void thread_init (void);
+// already in  thread.c -> line 91
+/* Initializes the threading system by transforming the running thread
+   into the initial thread. This can't be done directly in thread_start()
+   because it requires running in the context of the initial thread. */
+
 void thread_start (void);
 
 void thread_tick (void);
+// already in  thread.c -> line 123
+/* Called by the timer interrupt handler at each timer tick.
+   Thus, this function runs in an external interrupt context. */
+// used in     timer.c ->  line 180 (timer_interrupt)
+//                         update statistics for the current thread (idle_ticks, kernel_ticks / thread_ticks)
+//                         by using thread_current() (return by running_thread())
+
 void thread_print_stats (void);
 
 typedef void thread_func (void *aux);
@@ -120,11 +142,17 @@ void thread_block (void);
 void thread_unblock (struct thread *);
 
 struct thread *thread_current (void);
+// already in  thread.c -> line 256
+/* returns the running thread (check if it running now)*/
+
 tid_t thread_tid (void);
 const char *thread_name (void);
 
 void thread_exit (void) NO_RETURN;
 void thread_yield (void);
+// already in  thread.c -> line 302
+/* Yields the CPU.  The current thread is not put to sleep and
+   may be scheduled again immediately at the scheduler's whim. */
 
 /* Performs some operation on thread t, given auxiliary data AUX. */
 typedef void thread_action_func (struct thread *t, void *aux);
@@ -137,5 +165,25 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+
+// New code
+void thread_sleep (int64_t ticks);
+/*
+###############################################################################
+HERE HERE HERE (9:28)
+void thread_sleep(int64_t ticks)
+{
+   if the current thread is not idele thread,
+         change the state of the caller thread to BLOCKED,
+         store the local tick to wake up,
+         update the global tick if necessary,
+         and call schedule()
+   When you manipulate thread list, disable interrupt!     -> thread_yield (thread.c -> line 302)
+}
+###############################################################################
+*/
+
+// New code
+void thread_wake_up (int64_t ticks);
 
 #endif /* threads/thread.h */

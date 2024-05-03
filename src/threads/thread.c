@@ -28,6 +28,9 @@ static struct list ready_list;
    when they are first scheduled and removed when they exit. */
 static struct list all_list;
 
+// New code
+static struct list sleep_list;
+
 /* Idle thread. */
 static struct thread *idle_thread;
 
@@ -92,6 +95,8 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
+  // New code
+  list_init (&sleep_list); 
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -464,6 +469,9 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
 
+  // New code
+  t->tick_till_wake_up = 0; // initialize the tick_till_wake_up to 0
+
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);
@@ -582,3 +590,57 @@ allocate_tid (void)
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
+
+// New code
+// ###############################################################################
+// HERE HERE HERE
+// use same sturcture as thread_yield
+  //          -> thread_yield (thread.c -> line 302)
+
+  //  if the current thread is not idele thread,  (???)
+  //        change the state of the caller thread to BLOCKED, (check/in thread_block)
+  //        store the local tick to wake up,                  (check)
+  //        update the global tick if necessary,  (???)        
+  //        and call schedule()                               (check/in thread_block)
+  //  When you manipulate thread list, disable interrupt!     (check)
+void
+thread_sleep (int64_t ticks)                // ticks = current tick + ticks to sleep (target tick)
+{
+  struct thread *cur = thread_current ();
+  enum intr_level old_level;
+
+  ASSERT (!intr_context ());
+
+  old_level = intr_disable ();
+  cur->tick_till_wake_up = ticks;           // store current tick to use when wake up
+  list_push_back (&sleep_list, &cur->sleep_elem); // insert the thread to the sleep queue
+  thread_block ();                          // set the current thread to BLOCKED & call schedule()
+  intr_set_level (old_level);
+}
+
+
+void
+thread_wake_up (int64_t ticks)
+{
+  if (!list_empty (&sleep_list)){
+    struct list_elem *sleeping_thread_ptr;
+    struct thread *sleeping_thread;
+    sleeping_thread_ptr = list_front(&sleep_list);
+    // list_front is at src/lib/kernel/list.c
+
+    while(sleeping_thread_ptr != list_end(&sleep_list))
+    {
+      sleeping_thread = list_entry (sleeping_thread_ptr, struct thread, sleep_elem);
+      if (sleeping_thread->tick_till_wake_up <= ticks)
+      {
+        sleeping_thread_ptr = list_remove (sleeping_thread_ptr);
+        thread_unblock (sleeping_thread);     // change the state of the thread to READY
+        // enable that thread to be scheduled
+      }
+      else
+      {
+        sleeping_thread_ptr = list_next(sleeping_thread_ptr);
+      }
+    }
+  }
+}
