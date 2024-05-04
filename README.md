@@ -1,2 +1,2 @@
-# CSCC69-Pintos
+# CSCC69-Pintos / !!cloned from thierrySans!!
 
