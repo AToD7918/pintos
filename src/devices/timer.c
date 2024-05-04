@@ -92,8 +92,8 @@ timer_sleep (int64_t ticks)
   int64_t start = timer_ticks ();
 
   ASSERT (intr_get_level () == INTR_ON);
-      // while (timer_elapsed (start) < ticks) 
-      //   thread_yield ();
+  // while (timer_elapsed (start) < ticks) 
+  //   thread_yield ();
     /*
     ###############################################################################
     HERE HERE HERE (8:11)
@@ -101,6 +101,7 @@ timer_sleep (int64_t ticks)
     = Call the function that insert thread to the sleep queue
     ###############################################################################
     */
+  // check if it needs to sleep
   if (timer_elapsed(start) < ticks)
       thread_sleep(start + ticks);    //implement by yourself
 }
